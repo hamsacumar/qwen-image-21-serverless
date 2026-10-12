@@ -4,8 +4,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV HF_HOME=/workspace/hf_cache
 
-RUN apt-get update && apt-get install -y git git-lfs curl && rm -rf /var/lib/apt/lists/*
-
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    git-lfs \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+    
 WORKDIR /opt
 
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git

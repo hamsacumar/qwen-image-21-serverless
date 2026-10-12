@@ -10,6 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git-lfs \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+RUN command -v gcc && gcc --version && command -v g++ && g++ --version
+
+ENV CC=/usr/bin/gcc
+ENV CXX=/usr/bin/g++
     
 WORKDIR /opt
 

@@ -10,7 +10,11 @@ import runpod
 
 COMFY_URL = "http://127.0.0.1:8188"
 WORKFLOW_PATH = "/app/workflow_api.json"
-MODEL_PATH = "/workspace/qwen-models"
+MODEL_PATH = (
+    "/runpod-volume/qwen-models"
+    if os.path.isdir("/runpod-volume/qwen-models")
+    else "/workspace/qwen-models"
+)
 CONFIG_PATH = "/app/extra_model_paths.yaml"
 
 PROMPT_NODE = "459:471"

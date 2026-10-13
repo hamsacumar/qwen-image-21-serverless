@@ -798,7 +798,7 @@
               "default"
             ],
             "widgets_values_named": {
-              "clip_name": "qwen3vl_8b_bf16.safetensors",
+              "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
               "device": "default",
               "type": "qwen_image"
             }
@@ -1826,7 +1826,7 @@
       ],
       "widgets_values_named": {
         "cfg": 1,
-        "clip_name": "qwen3vl_8b_bf16.safetensors",
+        "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
         "height": 1024,
         "negative_prompt": "",
         "prompt": "Keep the character and pose in <image1> unchanged, put this light blue denim shirt from <image2> on the character, preserve the original facial features, hair, body shape and pose, the denim shirt fits naturally on body, realistic denim fabric texture, natural clothing folds, keep the original background and original lighting, high fashion editorial photography, sharp details",

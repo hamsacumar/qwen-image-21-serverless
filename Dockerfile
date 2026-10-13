@@ -33,6 +33,6 @@ WORKDIR /app
 
 COPY handler.py .
 COPY workflow_api.json .
-
+COPY workflow_edit_api.json .
 
 CMD ["python", "-u", "handler.py"]

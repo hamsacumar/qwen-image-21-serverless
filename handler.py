@@ -178,19 +178,13 @@ def handler(job):
                 workflow = json.load(f)
 
             original_image = data.get("image")
-            reference_image = data.get("reference_image")
 
             workflow["470"]["inputs"]["image"] = upload_image(
                 original_image,
                 "image",
                 "original.png",
             )
-            workflow["475"]["inputs"]["image"] = upload_image(
-                reference_image,
-                "reference_image",
-                "reference.png",
-            )
-
+            
             workflow[EDIT_PROMPT_NODE]["inputs"]["prompt"] = prompt
 
         workflow[SAMPLER_NODE]["inputs"]["seed"] = seed

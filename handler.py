@@ -1,4 +1,3 @@
-```python
 import os
 import json
 import time
@@ -236,8 +235,28 @@ def handler(job):
         }
 
 
+
+print("=== STARTUP DIAGNOSTICS ===", flush=True)
+print(
+    f"/runpod-volume exists: {os.path.isdir('/runpod-volume')}",
+    flush=True,
+)
+print(
+    f"/runpod-volume/qwen-models exists: "
+    f"{os.path.isdir('/runpod-volume/qwen-models')}",
+    flush=True,
+)
+print(
+    f"/workspace/qwen-models exists: "
+    f"{os.path.isdir('/workspace/qwen-models')}",
+    flush=True,
+)
+print(f"Selected MODEL_PATH: {MODEL_PATH}", flush=True)
+
 if not os.path.isdir(MODEL_PATH):
-    raise RuntimeError(f"Models volume not found: {MODEL_PATH}")
+    raise RuntimeError(
+        f"Models volume not found: {MODEL_PATH}"
+    )
 
 with open(CONFIG_PATH, "w") as f:
     f.write(
@@ -248,19 +267,30 @@ with open(CONFIG_PATH, "w") as f:
         "  vae: vae/\n"
     )
 
+
+print("=== STARTING COMFYUI ===", flush=True)
+
 comfy_process = subprocess.Popen(
     [
-        "python", "/opt/ComfyUI/main.py",
+        "python", "-u", "/opt/ComfyUI/main.py",
         "--listen", "127.0.0.1",
         "--port", "8188",
         "--extra-model-paths-config", CONFIG_PATH,
     ],
     cwd="/opt/ComfyUI",
+    stdout=None,
+    stderr=None,
 )
 
+
 for attempt in range(180):
-    if comfy_process.poll() is not None:
-        raise RuntimeError("ComfyUI exited during startup")
+    exit_code = comfy_process.poll()
+
+    if exit_code is not None:
+        raise RuntimeError(
+            f"ComfyUI exited during startup "
+            f"with exit code {exit_code}"
+        )
 
     try:
         response = session.get(
@@ -268,7 +298,7 @@ for attempt in range(180):
             timeout=3,
         )
         if response.ok:
-            print("ComfyUI is ready")
+            print("=== COMFYUI IS READY ===", flush=True)
             break
     except requests.RequestException:
         pass
@@ -279,4 +309,3 @@ else:
     raise RuntimeError("ComfyUI startup timed out")
 
 runpod.serverless.start({"handler": handler})
-```

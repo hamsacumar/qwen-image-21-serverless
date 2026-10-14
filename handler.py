@@ -140,16 +140,33 @@ def wait_for_image(prompt_id, timeout_seconds=900):
 
 
 def handler(job):
-    data = job.get("input", {})
+    print("========== HANDLER STARTED ==========", flush=True)
+
+    data = job.get("input") or {}
     mode = data.get("mode", "generate")
 
-    print("DEBUG mode:", data.get("mode"), flush=True)
-    print("DEBUG input keys:", list(data.keys()), flush=True)
-    print("DEBUG image type:", type(data.get("image")).__name__, flush=True)
-    print("DEBUG image length:", len(data.get("image", "")) if isinstance(data.get("image"), str) else 0, flush=True)
+    print(f"DEBUG job_id: {job.get('id')}", flush=True)
+    print(f"DEBUG mode: {mode!r}", flush=True)
+    print(f"DEBUG input keys: {list(data.keys())}", flush=True)
+
+    image = data.get("image")
+
+    print(f"DEBUG image type: {type(image).__name__}", flush=True)
+    print(
+        f"DEBUG image length: "
+        f"{len(image) if isinstance(image, str) else 'N/A'}",
+        flush=True,
+    )
+    print(f"DEBUG image present: {bool(image)}", flush=True)
 
     if mode not in ("generate", "edit"):
         return {"error": "mode must be 'generate' or 'edit'"}
+
+    if mode == "edit" and not image:
+        return {
+            "error": "Edit mode requires a non-empty Base64 image",
+            "received_input_keys": list(data.keys()),
+        }
 
     prompt = data.get("prompt")
     if not isinstance(prompt, str) or not prompt.strip():
@@ -182,10 +199,8 @@ def handler(job):
             with open(EDIT_WORKFLOW_PATH) as f:
                 workflow = json.load(f)
 
-            original_image = data.get("image")
-
             workflow["470"]["inputs"]["image"] = upload_image(
-                original_image,
+                image,
                 "image",
                 "original.png",
             )
@@ -197,6 +212,11 @@ def handler(job):
         workflow[RESOLUTION_NODE]["inputs"]["aspect_ratio"] = aspect_ratio
         workflow[RESOLUTION_NODE]["inputs"]["megapixels"] = megapixels
 
+        print(
+            f"DEBUG submitting ComfyUI workflow: mode={mode}",
+            flush=True,
+        )
+
         response = session.post(
             f"{COMFY_URL}/prompt",
             json={
@@ -206,11 +226,14 @@ def handler(job):
             timeout=60,
         )
         response.raise_for_status()
+
         prompt_id = response.json()["prompt_id"]
+        print(f"DEBUG ComfyUI prompt_id: {prompt_id}", flush=True)
 
         result = wait_for_image(prompt_id)
 
         if "error" in result:
+            print(f"DEBUG generation error: {result}", flush=True)
             return result
 
         result.update({
@@ -218,21 +241,27 @@ def handler(job):
             "seed": seed,
             "steps": steps,
         })
+
+        print("DEBUG generation completed successfully", flush=True)
         return result
 
     except ValueError as exc:
+        print(f"DEBUG validation error: {exc}", flush=True)
         return {"error": str(exc)}
+
     except requests.RequestException as exc:
+        print(f"DEBUG request error: {exc}", flush=True)
         return {
             "error": "Could not communicate with ComfyUI",
             "details": str(exc),
         }
+
     except Exception as exc:
+        print(f"DEBUG unexpected error: {exc}", flush=True)
         return {
             "error": "Unexpected handler error",
             "details": str(exc),
         }
-
 
 
 print("=== STARTUP DIAGNOSTICS ===", flush=True)

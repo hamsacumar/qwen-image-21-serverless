@@ -143,6 +143,11 @@ def handler(job):
     data = job.get("input", {})
     mode = data.get("mode", "generate")
 
+    print("DEBUG mode:", data.get("mode"), flush=True)
+    print("DEBUG input keys:", list(data.keys()), flush=True)
+    print("DEBUG image type:", type(data.get("image")).__name__, flush=True)
+    print("DEBUG image length:", len(data.get("image", "")) if isinstance(data.get("image"), str) else 0, flush=True)
+
     if mode not in ("generate", "edit"):
         return {"error": "mode must be 'generate' or 'edit'"}
 
@@ -184,7 +189,7 @@ def handler(job):
                 "image",
                 "original.png",
             )
-            
+
             workflow[EDIT_PROMPT_NODE]["inputs"]["prompt"] = prompt
 
         workflow[SAMPLER_NODE]["inputs"]["seed"] = seed

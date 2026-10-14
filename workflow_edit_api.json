@@ -206,10 +206,6 @@
       "vae": [
         "459:454",
         0
-      ],
-      "images.image_2": [
-        "475",
-        0
       ]
     },
     "class_type": "TextEncodeQwenImage21",

@@ -7,6 +7,7 @@ import binascii
 import subprocess
 import mimetypes
 
+import boto3
 import requests
 import runpod
 
@@ -29,6 +30,16 @@ SAVE_NODE = "461"
 
 session = requests.Session()
 
+S3_BUCKET = os.environ.get("S3_BUCKET")
+AWS_REGION = os.environ.get("AWS_REGION", "ap-southeast-1")
+
+if not S3_BUCKET:
+    raise RuntimeError("S3_BUCKET environment variable is not set")
+
+s3 = boto3.client(
+    "s3",
+    region_name=AWS_REGION,
+)
 
 def decode_image(value, field_name):
     """Decode a Base64 image or data URI into bytes."""
@@ -126,10 +137,10 @@ def wait_for_image(prompt_id, timeout_seconds=900):
                 )
                 image_response.raise_for_status()
 
+                image_bytes = image_response.content
+
                 return {
-                    "image_base64": base64.b64encode(
-                        image_response.content
-                    ).decode("utf-8"),
+                    "image_bytes": image_bytes,
                     "mime_type": "image/png",
                     "filename": info["filename"],
                 }
@@ -138,6 +149,18 @@ def wait_for_image(prompt_id, timeout_seconds=900):
 
     return {"error": "Generation timed out"}
 
+
+def upload_bytes_to_s3(image_bytes, s3_key, content_type="image/png"):
+    """Upload generated image bytes directly to S3."""
+
+    s3.put_object(
+        Bucket=S3_BUCKET,
+        Key=s3_key,
+        Body=image_bytes,
+        ContentType=content_type,
+    )
+
+    return s3_key
 
 def handler(job):
     print("========== HANDLER STARTED ==========", flush=True)
@@ -236,13 +259,37 @@ def handler(job):
             print(f"DEBUG generation error: {result}", flush=True)
             return result
 
+        # Get generated image bytes
+        image_bytes = result.pop("image_bytes")
+
+        # Use the RunPod job ID to create a unique S3 path
+        job_id = job.get("id", str(uuid.uuid4()))
+
+        s3_key = f"images/{job_id}/{result['filename']}"
+
+        print(
+            f"DEBUG uploading generated image to S3: "
+            f"s3://{S3_BUCKET}/{s3_key}",
+            flush=True,
+        )
+
+        upload_bytes_to_s3(
+            image_bytes,
+            s3_key,
+            result.get("mime_type", "image/png"),
+        )
+
         result.update({
             "mode": mode,
             "seed": seed,
             "steps": steps,
+            "s3_bucket": S3_BUCKET,
+            "s3_key": s3_key,
         })
 
+        print("DEBUG S3 upload completed successfully", flush=True)
         print("DEBUG generation completed successfully", flush=True)
+
         return result
 
     except ValueError as exc:

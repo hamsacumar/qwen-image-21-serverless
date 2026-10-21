@@ -81,16 +81,25 @@ SAVE_IMAGE_NODE = "461"
 # Image size mappings
 # ============================================================
 
+
 IMAGE_SIZE_MAP = {
+    # Square
     "square": "1:1 (Square)",
     "square_hd": "1:1 (Square)",
-    "portrait_4_3": "3:4 (Portrait)",
-    "portrait_3_4": "3:4 (Portrait)",
-    "portrait_16_9": "9:16 (Portrait)",
-    "landscape_4_3": "4:3 (Landscape)",
-    "landscape_3_2": "3:2 (Landscape)",
-    "landscape_16_9": "16:9 (Landscape)",
+
+    # Portrait
+    "portrait_2_3": "2:3 (Portrait Photo)",
+    "portrait_3_4": "3:4 (Portrait Standard)",
+    "portrait_4_3": "3:4 (Portrait Standard)",
+    "portrait_16_9": "9:16 (Portrait Widescreen)",
+
+    # Landscape
+    "landscape_4_3": "4:3 (Standard)",
+    "landscape_3_2": "3:2 (Photo)",
+    "landscape_16_9": "16:9 (Widescreen)",
+    "landscape_21_9": "21:9 (Ultrawide)",
 }
+
 
 ALLOWED_OUTPUT_FORMATS = {"png"}
 
@@ -387,12 +396,22 @@ def wait_for_images(prompt_id, timeout_seconds=COMFY_TIMEOUT_SECONDS):
             if images:
                 return {"images": images}
 
-        time.sleep(2)
+            if status_string == "success":
+                return error(
+                    "ComfyUI completed without producing an image",
+                    {
+                        "prompt_id": prompt_id,
+                        "status": status,
+                        "output_nodes": list(outputs.keys()),
+                    },
+                )
 
-    return error(
-        "Timed out waiting for ComfyUI",
-        f"prompt_id={prompt_id}, timeout={timeout_seconds}s",
-    )
+            time.sleep(2)
+
+            return error(
+                "Timed out waiting for ComfyUI",
+                f"prompt_id={prompt_id}, timeout={timeout_seconds}s",
+            )
 
 
 # ============================================================

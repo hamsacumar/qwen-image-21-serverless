@@ -6,7 +6,8 @@ import random
 import time
 import uuid
 from urllib.parse import urlparse
-
+import subprocess
+import sys
 import boto3
 import requests
 import runpod
@@ -561,5 +562,61 @@ def handler(job):
             "details": str(exc),
         }
 
+
+
+# --------------------------------------------------
+# Start ComfyUI before accepting RunPod jobs
+# --------------------------------------------------
+
+def start_comfyui():
+    print("Starting ComfyUI...", flush=True)
+
+    comfy_process = subprocess.Popen(
+        [
+            sys.executable,
+            "main.py",
+            "--listen",
+            "127.0.0.1",
+            "--port",
+            "8188",
+        ],
+        cwd="/opt/ComfyUI",
+    )
+
+    deadline = time.time() + 600
+
+    while time.time() < deadline:
+        # Stop immediately if ComfyUI crashes during startup.
+        if comfy_process.poll() is not None:
+            raise RuntimeError(
+                f"ComfyUI exited during startup with code "
+                f"{comfy_process.returncode}. Check the worker logs."
+            )
+
+        try:
+            response = session.get(
+                f"{COMFY_URL}/system_stats",
+                timeout=5,
+            )
+
+            if response.status_code == 200:
+                print("ComfyUI is ready!", flush=True)
+                return comfy_process
+
+        except requests.RequestException:
+            pass
+
+        time.sleep(2)
+
+    comfy_process.terminate()
+
+    raise RuntimeError(
+        "ComfyUI did not become ready within 600 seconds. "
+        "Check the worker logs for startup errors."
+    )
+
+
+# Start ComfyUI first, then accept serverless jobs.
+comfy_process = start_comfyui()
 
 runpod.serverless.start({"handler": handler})

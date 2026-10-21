@@ -563,12 +563,62 @@ def handler(job):
         }
 
 
+def configure_model_paths():
+    candidates = [
+        "/runpod-volume/qwen-models",
+        "/workspace/qwen-models",
+    ]
+
+    model_root = next(
+        (path for path in candidates if os.path.isdir(path)),
+        None,
+    )
+
+    if model_root is None:
+        raise RuntimeError(
+            "Qwen model directory not found. Checked: "
+            + ", ".join(candidates)
+        )
+
+    required_files = {
+        "diffusion_models": "qwen_image_2.1_int8_convrot.safetensors",
+        "text_encoders": "qwen3vl_8b_int8_convrot.safetensors",
+        "vae": "qwen_image_2.1_vae_bf16.safetensors",
+    }
+
+    for folder, filename in required_files.items():
+        path = os.path.join(model_root, folder, filename)
+
+        if not os.path.isfile(path):
+            raise RuntimeError(
+                f"Missing model file: {path}. "
+                "Check your persistent volume folder structure."
+            )
+
+    config = f"""
+qwen_persistent:
+  base_path: "{model_root}/"
+  diffusion_models: diffusion_models/
+  text_encoders: text_encoders/
+  vae: vae/
+"""
+
+    config_path = "/opt/ComfyUI/extra_model_paths.yaml"
+
+    with open(config_path, "w", encoding="utf-8") as file:
+        file.write(config)
+
+    print(f"Configured Qwen model paths: {model_root}", flush=True)
+
+
 
 # --------------------------------------------------
 # Start ComfyUI before accepting RunPod jobs
 # --------------------------------------------------
 
 def start_comfyui():
+    configure_model_paths()
+
     print("Starting ComfyUI...", flush=True)
 
     comfy_process = subprocess.Popen(

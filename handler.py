@@ -327,6 +327,7 @@ def upload_input_image(value, index):
 # Wait for ComfyUI outputs
 # ============================================================
 
+
 def wait_for_images(prompt_id, timeout_seconds=COMFY_TIMEOUT_SECONDS):
     deadline = time.time() + timeout_seconds
 
@@ -353,8 +354,7 @@ def wait_for_images(prompt_id, timeout_seconds=COMFY_TIMEOUT_SECONDS):
 
             outputs = prompt_history.get("outputs", {})
 
-            # Prefer the configured Save Image node to avoid
-            # collecting previews or unrelated intermediate images.
+            # Prefer the configured Save Image node.
             if SAVE_IMAGE_NODE in outputs:
                 selected_outputs = {
                     SAVE_IMAGE_NODE: outputs[SAVE_IMAGE_NODE]
@@ -374,12 +374,8 @@ def wait_for_images(prompt_id, timeout_seconds=COMFY_TIMEOUT_SECONDS):
                         f"{COMFY_URL}/view",
                         params={
                             "filename": filename,
-                            "subfolder": image_info.get(
-                                "subfolder", ""
-                            ),
-                            "type": image_info.get(
-                                "type", "output"
-                            ),
+                            "subfolder": image_info.get("subfolder", ""),
+                            "type": image_info.get("type", "output"),
                         },
                         timeout=120,
                     )
@@ -406,13 +402,14 @@ def wait_for_images(prompt_id, timeout_seconds=COMFY_TIMEOUT_SECONDS):
                     },
                 )
 
-            time.sleep(2)
+        # Keep polling while ComfyUI is processing.
+        time.sleep(2)
 
-            return error(
-                "Timed out waiting for ComfyUI",
-                f"prompt_id={prompt_id}, timeout={timeout_seconds}s",
-            )
-
+    # Only return a timeout after the deadline expires.
+    return error(
+        "Timed out waiting for ComfyUI",
+        f"prompt_id={prompt_id}, timeout={timeout_seconds}s",
+    )
 
 # ============================================================
 # S3 uploads
